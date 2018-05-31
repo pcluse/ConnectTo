@@ -94,8 +94,19 @@ namespace Utility
 
             //If Drive is already mapped disconnect the current 
             //mapping before adding the new mapping
-            if (IsDriveMapped(sDriveLetter))
+            string currentNetworkPath = GetCurrentMapping(sDriveLetter);
+
+            if (currentNetworkPath == "")
             {
+                // Not connected do nothing
+            }
+            else if (currentNetworkPath == sNetworkPath)
+            {
+                // Already connected
+                return 0;
+            }
+            else {
+                // Connected to something else. Disconnect first
                 DisconnectNetworkDrive(sDriveLetter, true);
             }
 
@@ -114,6 +125,7 @@ namespace Utility
             }
         }
 
+        /*
         public static bool IsDriveMapped(string sDriveLetter)
         {
             string[] DriveList = Environment.GetLogicalDrives();
@@ -125,8 +137,18 @@ namespace Utility
                 }
             }
             return false;
-        }
+        } */
 
+        public static string GetCurrentMapping(string sDriveLetter)
+        {
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                "select * from Win32_MappedLogicalDisk where caption = '" + sDriveLetter + ":'");
+            foreach (ManagementObject drive in searcher.Get())
+            {
+                return drive["ProviderName"].ToString();
+            }
+            return "";
+        }
     }
 
 }
