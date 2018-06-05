@@ -5,13 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Management;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 
 /* Reference
 
     https://stackoverflow.com/questions/43173970/map-network-drive-programmatically-in-c-sharp-on-windows-10?rq=1
 
-    https://stackoverflow.com/questions/16040148/add-printer-to-local-computer-using-managementclass
+    https://www.pinvoke.net/default.aspx/winspool.AddPrinterConnection
+    https://www.pinvoke.net/default.aspx/winspool.SetDefaultPrinter
+
+    Turn on Legacy Default Printer Mode
+    https://social.technet.microsoft.com/Forums/office/en-US/e5996baa-5825-440c-940d-862a80730f8b/let-windows-manage-my-default-printer-disable-via-gpo?forum=win10itprogeneral
 */
 
 namespace Utility
@@ -94,8 +99,19 @@ namespace Utility
 
             //If Drive is already mapped disconnect the current 
             //mapping before adding the new mapping
-            if (IsDriveMapped(sDriveLetter))
+            string currentNetworkPath = GetCurrentMapping(sDriveLetter);
+
+            if (currentNetworkPath == "")
             {
+                // Not connected do nothing
+            }
+            else if (currentNetworkPath == sNetworkPath)
+            {
+                // Already connected
+                return 0;
+            }
+            else {
+                // Connected to something else. Disconnect first
                 DisconnectNetworkDrive(sDriveLetter, true);
             }
 
@@ -114,19 +130,27 @@ namespace Utility
             }
         }
 
-        public static bool IsDriveMapped(string sDriveLetter)
-        {
-            string[] DriveList = Environment.GetLogicalDrives();
-            for (int i = 0; i < DriveList.Length; i++)
-            {
-                if (sDriveLetter + ":\\" == DriveList[i].ToString())
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
 
+        public static string GetCurrentMapping(string sDriveLetter)
+        {
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                "select * from Win32_MappedLogicalDisk where caption = '" + sDriveLetter + ":'");
+            foreach (ManagementObject drive in searcher.Get())
+            {
+                return drive["ProviderName"].ToString();
+            }
+            return "";
+        }
+    }
+
+    public class Printer
+    {
+        [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool SetDefaultPrinter(string Name);
+
+        [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AddPrinterConnection(String pszBuffer);
     }
 
 }
@@ -138,32 +162,20 @@ namespace ConnectTo
     {
         static void PrintUsage()
         {
-            Console.WriteLine("Usage: ConnectTo (-printer|-share letter) resource");
+            Console.WriteLine("Usage: ConnectTo (-printer|-defaultprinter|-share letter) resource");
             Environment.Exit(1);
         }
 
-        static void ConnectToPrinter(string printer)
+        static void ConnectToPrinter(string printer, bool defaultPrinter)
         {
-            uint errorCode = 0;
-            // Console.WriteLine("Connecting to " + printer);
-            using (ManagementClass win32Printer = new ManagementClass("Win32_Printer"))
+            bool success = Utility.Printer.AddPrinterConnection(printer);
+            if (success && defaultPrinter)
             {
-                using (ManagementBaseObject inputParam =
-                   win32Printer.GetMethodParameters("AddPrinterConnection"))
-                {
-                    // Replace <server_name> and <printer_name> with the actual server and
-                    // printer names.
-                    inputParam.SetPropertyValue("Name", printer);
-
-                    using (ManagementBaseObject result =
-                        (ManagementBaseObject)win32Printer.InvokeMethod("AddPrinterConnection", inputParam, null))
-                    {
-                        errorCode = (uint)result.Properties["returnValue"].Value;
-
-                    }
-                }
+                // Turn on legacy default printer mode
+                Registry.SetValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows", "LegacyDefaultPrinterMode", 1);
+                success = Utility.Printer.SetDefaultPrinter(printer);
             }
-            Environment.Exit((int)errorCode);
+            Environment.Exit(success ? 0 : 1);
         }
 
         static void ConnectToShare(string driveLetter, string share)
@@ -172,6 +184,11 @@ namespace ConnectTo
             if (driveLetter.Length > 1)
             {
                 driveLetter = driveLetter.Substring(0, 1);
+            }
+            driveLetter = driveLetter.ToUpper();
+            if (driveLetter == "C" || driveLetter == "D")
+            {
+                Environment.Exit(1);
             }
 
             int errorCode = Utility.NetworkDrive.MapNetworkDrive(driveLetter, share);
@@ -182,7 +199,11 @@ namespace ConnectTo
         {
             if (args.Length == 2 && args[0].Equals("-printer"))
             {
-                ConnectToPrinter(args[1]);
+                ConnectToPrinter(args[1], false);
+            }
+            else if (args.Length == 2 && args[0].Equals("-defaultprinter"))
+            {
+                ConnectToPrinter(args[1], true);
             }
             else if (args.Length == 3 && args[0].Equals("-share"))
             {
