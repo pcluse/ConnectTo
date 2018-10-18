@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Management;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using System.Diagnostics;
+using System.Threading;
 
 
 /* Reference
@@ -166,32 +164,87 @@ namespace ConnectTo
             Environment.Exit(1);
         }
 
+        static void LogInformation(string message)
+        {
+            /* using (EventLog eventLog = new EventLog("Application"))
+            {
+                eventLog.Source = "Application";
+                eventLog.WriteEntry(message, EventLogEntryType.Information);
+            } */
+            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Information, 1000);
+        }
+        static void LogError(string message)
+        {
+            /* using (EventLog eventLog = new EventLog("Application"))
+            {
+                eventLog.Source = "Application";
+                eventLog.WriteEntry(message, EventLogEntryType.Error);
+            } */
+            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Error, 1000);
+        }
+
         static void ConnectToPrinter(string printer, bool defaultPrinter)
         {
+            int tryNo = 1;
+            while (tryNo < 4) {
+                bool success = ConnectToPrinterAux(printer, defaultPrinter, tryNo);
+                if (success)
+                {
+                    Environment.Exit(0);
+                }
+                tryNo++;
+                Thread.Sleep(5000);
+            }
+            Environment.Exit(1);
+        }
+
+        static bool ConnectToPrinterAux(string printer, bool defaultPrinter, int tryNo)
+        {
+            int error;
+            LogInformation("connectTo " + (defaultPrinter ? "-defaultprinter" : "-printer") + " " + printer + " try #" + tryNo);
             bool success = Utility.Printer.AddPrinterConnection(printer);
-            if (success && defaultPrinter)
+            
+            if (! success)
+            {
+                error = Marshal.GetLastWin32Error();
+                LogError("connectTo AddPrinterConnection exit code = " + error);
+                return false;
+            }
+            if (defaultPrinter)
             {
                 // Turn on legacy default printer mode
                 Registry.SetValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows", "LegacyDefaultPrinterMode", 1);
                 success = Utility.Printer.SetDefaultPrinter(printer);
+                if (!success)
+                {
+                    error = Marshal.GetLastWin32Error();
+                    LogError("connectTo SetDefaultPrinter exit code = " + error);
+                    return false;
+                }
             }
-            Environment.Exit(success ? 0 : 1);
+            return true;
         }
 
         static void ConnectToShare(string driveLetter, string share)
         {
+            LogInformation("connectTo -share " + driveLetter + " " + share);
             // Console.WriteLine("Connecting " + driveLetter + " to " + share);
             if (driveLetter.Length > 1)
             {
                 driveLetter = driveLetter.Substring(0, 1);
             }
             driveLetter = driveLetter.ToUpper();
-            if (driveLetter == "C" || driveLetter == "D")
+            if (driveLetter.CompareTo("D") == -1 || driveLetter.CompareTo("Z") == 1)
             {
+                LogError("connectTo letter " + driveLetter + ": not allowed");
                 Environment.Exit(1);
             }
 
             int errorCode = Utility.NetworkDrive.MapNetworkDrive(driveLetter, share);
+            if (errorCode != 0)
+            {
+                LogError("connectTo MapNetworkDrive exit code = " + errorCode);
+            }
             Environment.Exit(errorCode);
         }
 
