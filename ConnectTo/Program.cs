@@ -201,13 +201,13 @@ namespace ConnectTo
         static bool ConnectToPrinterAux(string printer, bool defaultPrinter, int tryNo)
         {
             int error;
-            LogInformation("connectTo " + (defaultPrinter ? "-defaultprinter" : "-printer") + " " + printer + " try #" + tryNo);
+            LogInformation(String.Format("connectTo {0} {1} try #{2}", (defaultPrinter ? "-defaultprinter" : "-printer"), printer, tryNo));
             bool success = Utility.Printer.AddPrinterConnection(printer);
             
             if (! success)
             {
                 error = Marshal.GetLastWin32Error();
-                LogError("connectTo AddPrinterConnection exit code = " + error);
+                LogError(String.Format("connectTo AddPrinterConnection exit code = {0}", error));
                 return false;
             }
             if (defaultPrinter)
@@ -218,7 +218,7 @@ namespace ConnectTo
                 if (!success)
                 {
                     error = Marshal.GetLastWin32Error();
-                    LogError("connectTo SetDefaultPrinter exit code = " + error);
+                    LogError(String.Format("connectTo SetDefaultPrinter exit code = {0}", error));
                     return false;
                 }
             }
@@ -227,7 +227,7 @@ namespace ConnectTo
 
         static void ConnectToShare(string driveLetter, string share)
         {
-            LogInformation("connectTo -share " + driveLetter + " " + share);
+            LogInformation(String.Format("connectTo -share {0} {1}", driveLetter, share));
             // Console.WriteLine("Connecting " + driveLetter + " to " + share);
             if (driveLetter.Length > 1)
             {
@@ -236,14 +236,14 @@ namespace ConnectTo
             driveLetter = driveLetter.ToUpper();
             if (driveLetter.CompareTo("D") == -1 || driveLetter.CompareTo("Z") == 1)
             {
-                LogError("connectTo letter " + driveLetter + ": not allowed");
+                LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
                 Environment.Exit(1);
             }
 
             int errorCode = Utility.NetworkDrive.MapNetworkDrive(driveLetter, share);
             if (errorCode != 0)
             {
-                LogError("connectTo MapNetworkDrive exit code = " + errorCode);
+                LogError(String.Format("connectTo MapNetworkDrive exit code = {0}", errorCode));
             }
             Environment.Exit(errorCode);
         }
