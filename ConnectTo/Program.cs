@@ -101,15 +101,18 @@ namespace Utility
 
             if (currentNetworkPath == "")
             {
+                Utility.Logging.LogInformation(String.Format("{0} is not connected to anything.", sDriveLetter));
                 // Not connected do nothing
             }
             else if (currentNetworkPath == sNetworkPath)
             {
                 // Already connected
+                Utility.Logging.LogInformation(String.Format("{0} is already connected to the correct path", sDriveLetter));
                 return 0;
             }
             else {
                 // Connected to something else. Disconnect first
+                Utility.Logging.LogInformation(String.Format("Will disconnect {0}",sDriveLetter));
                 DisconnectNetworkDrive(sDriveLetter, true);
             }
 
@@ -151,6 +154,27 @@ namespace Utility
         public static extern bool AddPrinterConnection(String pszBuffer);
     }
 
+    public class Logging
+    {
+        public static void LogInformation(string message)
+        {
+            /* using (EventLog eventLog = new EventLog("Application"))
+            {
+                eventLog.Source = "Application";
+                eventLog.WriteEntry(message, EventLogEntryType.Information);
+            } */
+            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Information, 1000);
+        }
+        public static void LogError(string message)
+        {
+            /* using (EventLog eventLog = new EventLog("Application"))
+            {
+                eventLog.Source = "Application";
+                eventLog.WriteEntry(message, EventLogEntryType.Error);
+            } */
+            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Error, 1000);
+        }
+    }
 }
 
 
@@ -164,24 +188,7 @@ namespace ConnectTo
             Environment.Exit(1);
         }
 
-        static void LogInformation(string message)
-        {
-            /* using (EventLog eventLog = new EventLog("Application"))
-            {
-                eventLog.Source = "Application";
-                eventLog.WriteEntry(message, EventLogEntryType.Information);
-            } */
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Information, 1000);
-        }
-        static void LogError(string message)
-        {
-            /* using (EventLog eventLog = new EventLog("Application"))
-            {
-                eventLog.Source = "Application";
-                eventLog.WriteEntry(message, EventLogEntryType.Error);
-            } */
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Error, 1000);
-        }
+        
 
         static void ConnectToPrinter(string printer, bool defaultPrinter)
         {
@@ -201,13 +208,13 @@ namespace ConnectTo
         static bool ConnectToPrinterAux(string printer, bool defaultPrinter, int tryNo)
         {
             int error;
-            LogInformation(String.Format("connectTo {0} {1} try #{2}", (defaultPrinter ? "-defaultprinter" : "-printer"), printer, tryNo));
+            Utility.Logging.LogInformation(String.Format("connectTo {0} {1} try #{2}", (defaultPrinter ? "-defaultprinter" : "-printer"), printer, tryNo));
             bool success = Utility.Printer.AddPrinterConnection(printer);
             
             if (! success)
             {
                 error = Marshal.GetLastWin32Error();
-                LogError(String.Format("connectTo AddPrinterConnection exit code = {0}", error));
+                Utility.Logging.LogError(String.Format("connectTo AddPrinterConnection exit code = {0}", error));
                 return false;
             }
             if (defaultPrinter)
@@ -218,7 +225,7 @@ namespace ConnectTo
                 if (!success)
                 {
                     error = Marshal.GetLastWin32Error();
-                    LogError(String.Format("connectTo SetDefaultPrinter exit code = {0}", error));
+                    Utility.Logging.LogError(String.Format("connectTo SetDefaultPrinter exit code = {0}", error));
                     return false;
                 }
             }
@@ -227,7 +234,7 @@ namespace ConnectTo
 
         static void ConnectToShare(string driveLetter, string share)
         {
-            LogInformation(String.Format("connectTo -share {0} {1}", driveLetter, share));
+            Utility.Logging.LogInformation(String.Format("connectTo -share {0} {1}", driveLetter, share));
             // Console.WriteLine("Connecting " + driveLetter + " to " + share);
             if (driveLetter.Length > 1)
             {
@@ -236,14 +243,14 @@ namespace ConnectTo
             driveLetter = driveLetter.ToUpper();
             if (driveLetter.CompareTo("D") == -1 || driveLetter.CompareTo("Z") == 1)
             {
-                LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
+                Utility.Logging.LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
                 Environment.Exit(1);
             }
 
             int errorCode = Utility.NetworkDrive.MapNetworkDrive(driveLetter, share);
             if (errorCode != 0)
             {
-                LogError(String.Format("connectTo MapNetworkDrive exit code = {0}", errorCode));
+                Utility.Logging.LogError(String.Format("connectTo MapNetworkDrive exit code = {0}", errorCode));
             }
             Environment.Exit(errorCode);
         }
