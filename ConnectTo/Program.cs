@@ -232,13 +232,16 @@ namespace Utility
             string lastOperation = "";
             while (!currentShare.ToString().Equals(sShare) && i < numberOfTries)
             {
-                //currentShare.Clear();
+                // Clear currentShare to avoid logging the wrong path
+                currentShare.Clear();
                 // Get current mapping
                 result = WNetGetConnection((sDriveLetter + ":"), currentShare, ref length);
                 lastOperation = "WNetGetConnection";
                 Logger.LogInformation(string.Format("Operation {0} gave {1} as result and returned UNC {2}. Message: {3}", lastOperation, result, currentShare.ToString(), GetErrorMessage(result)));
+                // If there were no error and the returned share is the same as the user supplied share
                 if (result == (int)ErrorCodes.NO_ERROR && currentShare.ToString().Equals(sShare))
                 {
+                    // Everything is fine, return
                     Logger.LogInformation(string.Format("{1}: is connected to {1}",sDriveLetter,sShare));
                     return result;
                 }
@@ -248,44 +251,47 @@ namespace Utility
                  */
                 else if (result == (int)ErrorCodes.ERROR_CONNECTION_UNAVAIL)
                 {
+                    // Create a NETRESOURCE which corresponds to the current input
                     NETRESOURCE oNetworkResource = new NETRESOURCE()
                     {
                         oResourceType = ResourceType.RESOURCETYPE_DISK,
                         sLocalName = sDriveLetter + ":",
                         sRemoteName = currentShare.ToString()
                     };
+                    // Add a persistent connection
                     result = WNetAddConnection2(ref oNetworkResource, null, null, 1);
                     lastOperation = "WNetAddConnection2 - existing connection";
                 }
                 // Not connected, connect it!
                 else if (result == (int)ErrorCodes.ERROR_NOT_CONNECTED)
                 {
+                    // Create a NETRESOURCE which corresponds to the current input
                     NETRESOURCE oNetworkResource = new NETRESOURCE()
                     {
                         oResourceType = ResourceType.RESOURCETYPE_DISK,
                         sLocalName = sDriveLetter + ":",
                         sRemoteName = sShare
                     };
+                    // Add a persistent connection
                     result = WNetAddConnection2(ref oNetworkResource, null, null, 1);
                     lastOperation = "WNetAddConnection2";
-                    //Console.WriteLine(GetErrorMessage(tes2));
                 }
                 /* 
                     NO_ERROR means it retrieved the connection successfully. 
                     If it does not match the path it should cancel the existing connection.
                 */
-                //else if (result == (int)ErrorCodes.ERROR_CONNECTION_UNAVAIL || result == (int)ErrorCodes.NO_ERROR && !currentShare.ToString().Equals(sShare))
                 else if (result == (int)ErrorCodes.NO_ERROR && !currentShare.ToString().Equals(sShare))
                 {
+                    // Disconnect (cancel) the current connection
                     result = WNetCancelConnection2(sDriveLetter + ":", 1, 1);
                     lastOperation = "WNetCancelConnection2";
                 }
 
                 Logger.LogInformation(string.Format("Operation {0} gave {1} as result. Message: {2}",lastOperation,result,GetErrorMessage(result)));
+                // To avoid hammering, wait for a while
                 Thread.Sleep(timeToWait);
                 i++;
             }
-            //Console.WriteLine("Tried {0} times out of {1}, waited for {2} seconds", i, numberOfTries, i * timeToWait / 1000);
             return result;
         }
 
@@ -402,7 +408,7 @@ namespace ConnectTo
 
             if (!string.IsNullOrEmpty(shareName))
             {
-                Utility.Logger.LogInformation(string.Format("Set name {0} on {1} for {2}",shareName,driveLetter,share));
+                Utility.Logger.LogInformation(string.Format("Set name '{0}' on {1} for {2}",shareName,driveLetter,share));
                 string keyName = share.Replace("\\", "#");
                 Registry.SetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\" + keyName, "_LabelFromDesktopINI", shareName);
             }
