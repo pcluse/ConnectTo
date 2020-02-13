@@ -20,26 +20,27 @@ using System.Text;
 
 namespace Utility
 {
+    // https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
     public enum ErrorCodes
     {
         NO_ERROR = 0x0,
-        ERROR_ACCESS_DENIED = 0x5,
-        ERROR_BAD_DEV_TYPE = 0x42,
-        ERROR_BAD_NET_NAME = 0x43,
-        ERROR_ALREADY_ASSIGNED = 0x55,
-        ERROR_INVALID_PASSWORD = 0x00000056,
-        ERROR_BUSY = 0x000000aa,
-        ERROR_BAD_DEVICE = 0x4B0,
-        ERROR_CONNECTION_UNAVAIL = 0x4B1,
-        ERROR_BAD_PROFILE = 0x4b6,
-        ERROR_NOT_CONNECTED = 0x8CA,
-        ERROR_OPEN_FILES = 0x961,
-        ERROR_DEVICE_ALREADY_REMEMBERED = 0x000004b2,
-        ERROR_NO_NET_OR_BAD_PATH = 0x000004b3,
-        ERROR_CANNOT_OPEN_PROFILE = 0x000004b5,
-        ERROR_EXTENDED_ERROR = 0x000004b8,
-        ERROR_NO_NETWORK = 0x000004c6,
-        ERROR_CANCELLED = 0x000004c7
+        ERROR_ACCESS_DENIED =               0x00000005,
+        ERROR_BAD_DEV_TYPE =                0x00000042,
+        ERROR_BAD_NET_NAME =                0x00000043,
+        ERROR_ALREADY_ASSIGNED =            0x00000055,
+        ERROR_INVALID_PASSWORD =            0x00000056,
+        ERROR_BUSY =                        0x000000AA,
+        ERROR_BAD_DEVICE =                  0x000004B0,
+        ERROR_CONNECTION_UNAVAIL =          0x000004B1,
+        ERROR_BAD_PROFILE =                 0x000004b6,
+        ERROR_NOT_CONNECTED =               0x000008CA,
+        ERROR_OPEN_FILES =                  0x00000961,
+        ERROR_DEVICE_ALREADY_REMEMBERED =   0x000004B2,
+        ERROR_NO_NET_OR_BAD_PATH =          0x000004B3,
+        ERROR_CANNOT_OPEN_PROFILE =         0x000004B5,
+        ERROR_EXTENDED_ERROR =              0x000004B8,
+        ERROR_NO_NETWORK =                  0x000004C6,
+        ERROR_CANCELLED =                   0x000004C7
     }
     public class NetworkDrive
     {
@@ -103,59 +104,45 @@ namespace Utility
             (string sLocalName, uint iFlags, int iForce);
         [DllImport("mpr.dll")]
         public static extern int WNetGetConnection(
-            string localName,
-            StringBuilder remoteName,
-            ref int length);
+            string sLocalName,
+            StringBuilder sbRemoteName,
+            ref int oilength);
 
         public static string GetErrorMessage(int ErrorCode)
         {
-            string Message = "";
+            //string Message = "";
             switch (ErrorCode)
             {
                 case (int)ErrorCodes.ERROR_ACCESS_DENIED:
-                    Message = "Access is denied.";
-                    break;
+                    return "Access is denied.";
                 case (int)ErrorCodes.ERROR_BAD_DEV_TYPE:
-                    Message = "The network resource type is not correct.";
-                    break;
+                    return "The network resource type is not correct.";
                 case (int)ErrorCodes.ERROR_BAD_NET_NAME:
-                    Message = "The network name cannot be found.";
-                    break;
+                    return "The network name cannot be found.";
                 case (int)ErrorCodes.ERROR_ALREADY_ASSIGNED:
-                    Message = "The local device name is already in use.";
-                    break;
+                    return "The local device name is already in use.";
                 case (int)ErrorCodes.ERROR_INVALID_PASSWORD:
-                    Message = "The specified network password is not correct.";
-                    break;
+                    return "The specified network password is not correct.";
                 case (int)ErrorCodes.ERROR_BUSY:
-                    Message = "The requested resource is in use.";
-                    break;
+                    return "The requested resource is in use.";
                 case (int)ErrorCodes.ERROR_BAD_DEVICE:
-                    Message = "The specified device name is invalid.";
-                    break;
+                    return "The specified device name is invalid.";
                 case (int)ErrorCodes.ERROR_CONNECTION_UNAVAIL:
-                    Message = "The device is not currently connected but it is a remembered connection.";
-                    break;
+                    return "The device is not currently connected but it is a remembered connection.";
                 case (int)ErrorCodes.ERROR_BAD_PROFILE:
-                    Message = "The network connection profile is corrupted.";
-                    break;
+                    return "The network connection profile is corrupted.";
                 case (int)ErrorCodes.ERROR_NOT_CONNECTED:
-                    Message = "This network connection does not exist.";
-                    break;
+                    return "This network connection does not exist.";
                 case (int)ErrorCodes.ERROR_OPEN_FILES:
-                    Message = "This network connection has files open or requests pending.";
-                    break;
+                    return "This network connection has files open or requests pending.";
                 case (int)ErrorCodes.ERROR_DEVICE_ALREADY_REMEMBERED:
-                    Message = "The local device name has a remembered connection to another network resource.";
-                    break;
+                    return "The local device name has a remembered connection to another network resource.";
                 case (int)ErrorCodes.ERROR_NO_NET_OR_BAD_PATH:
-                    Message = "The network path was either typed incorrectly, does not exist, or the network provider is not currently available. Please try retyping the path or contact your network administrator.";
-                    break;
+                    return "The network path was either typed incorrectly, does not exist, or the network provider is not currently available. Please try retyping the path or contact your network administrator.";
                 case (int)ErrorCodes.ERROR_CANNOT_OPEN_PROFILE:
-                    Message = "Unable to open the network connection profile.";
-                    break;
+                    return "Unable to open the network connection profile.";
                 case (int)ErrorCodes.ERROR_EXTENDED_ERROR:
-                    Message = "An extended error has occurred.";
+                    return "An extended error has occurred.";
                     /*
                     WNetGetLastErrorA(
                         LPDWORD lpError,
@@ -165,21 +152,15 @@ namespace Utility
                         DWORD   nNameBufSize
                         );
                     */
-                    break;
                 case (int)ErrorCodes.ERROR_NO_NETWORK:
-                    Message = "The network is not present or not started.";
-                    break;
+                    return "The network is not present or not started.";
                 case (int)ErrorCodes.ERROR_CANCELLED:
-                    Message = "The operation was canceled by the user.";
-                    break;
+                    return "The operation was canceled by the user.";
                 case (int)ErrorCodes.NO_ERROR:
-                    Message = "No error.";
-                    break;
+                    return "No error.";
                 default:
-                    Message = string.Format("{0}", ErrorCode);
-                    break;
+                    return string.Format("{0}", ErrorCode);
             }
-            return Message;
         }
 
         public static int MapNetworkDrive(string sDriveLetter, string sNetworkPath)
@@ -251,7 +232,7 @@ namespace Utility
             string lastOperation = "";
             while (!currentShare.ToString().Equals(sShare) && i < numberOfTries)
             {
-                currentShare.Clear();
+                //currentShare.Clear();
                 // Get current mapping
                 result = WNetGetConnection((sDriveLetter + ":"), currentShare, ref length);
                 lastOperation = "WNetGetConnection";
@@ -399,6 +380,7 @@ namespace ConnectTo
 
         static void ConnectToShare(string driveLetter, string share, string shareName)
         {
+            Utility.Logger.LogInformation("ConnectTo -share start.");
             if (driveLetter.Length > 1)
             {
                 driveLetter = driveLetter.Substring(0, 1);
@@ -414,8 +396,7 @@ namespace ConnectTo
 
             if (errorCode != 0)
             {
-                Utility.Logger.LogError(String.Format("connectTo MapNetworkDrive exit code = {0}", errorCode));
-                Utility.Logger.LogError(Utility.NetworkDrive.GetErrorMessage(errorCode));
+                Utility.Logger.LogError(String.Format("connectTo MapNetworkDrive exit code = {0}: {1}", errorCode, Utility.NetworkDrive.GetErrorMessage(errorCode)));
                 return;
             }
 
@@ -425,7 +406,7 @@ namespace ConnectTo
                 string keyName = share.Replace("\\", "#");
                 Registry.SetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\" + keyName, "_LabelFromDesktopINI", shareName);
             }
-
+            Utility.Logger.LogInformation("ConnectTo -share is done.");
             Environment.Exit(errorCode);
         }
         static void Main(string[] args)
