@@ -41,7 +41,6 @@ namespace Utility
         ERROR_NO_NETWORK = 0x000004c6,
         ERROR_CANCELLED = 0x000004c7
     }
-   
     public class NetworkDrive
     {
         private enum ResourceScope
@@ -200,7 +199,7 @@ namespace Utility
 
             //If Drive is already mapped disconnect the current 
             //mapping before adding the new mapping
-            string currentNetworkPath = GetCurrentWNetMapping(sDriveLetter);
+            string currentNetworkPath = GetCurrentMapping(sDriveLetter);
 
             if (currentNetworkPath == "")
             {
@@ -231,24 +230,6 @@ namespace Utility
             }
         }
 
-        public static string GetCurrentWNetMapping(string sDriveLetter)
-        {
-            int length = 250;
-            StringBuilder currentUNC = new StringBuilder(length);
-            int result = WNetGetConnection(sDriveLetter + ":", currentUNC, ref length);
-            Console.WriteLine(GetErrorMessage(result));
-            if (result != (int)ErrorCodes.NO_ERROR)
-            {
-                Console.WriteLine(currentUNC.ToString());
-                return "";
-            }
-            else
-            {
-                Console.WriteLine(currentUNC.ToString());
-                return currentUNC.ToString();
-            }
-            
-        }
         public static string GetCurrentMapping(string sDriveLetter)
         {
             ManagementObjectSearcher searcher = new ManagementObjectSearcher(
@@ -267,11 +248,14 @@ namespace Utility
             int numberOfTries = 10;
             int i = 0;
             StringBuilder currentShare = new StringBuilder(length);
+            string lastOperation = "";
             while (!currentShare.ToString().Equals(sShare) && i < numberOfTries)
             {
+                currentShare.Clear();
                 // Get current mapping
                 result = WNetGetConnection((sDriveLetter + ":"), currentShare, ref length);
-                
+                lastOperation = "WNetGetConnection";
+                Logger.LogInformation(string.Format("Operation {0} gave {1} as result and returned UNC {2}. Message: {3}", lastOperation, result, currentShare.ToString(), GetErrorMessage(result)));
                 if (result == (int)ErrorCodes.NO_ERROR && currentShare.ToString().Equals(sShare))
                 {
                     Logger.LogInformation(string.Format("{1}: is connected to {1}",sDriveLetter,sShare));
@@ -290,7 +274,7 @@ namespace Utility
                         sRemoteName = currentShare.ToString()
                     };
                     result = WNetAddConnection2(ref oNetworkResource, null, null, 1);
-                    Logger.LogInformation(string.Format("Add old connection operation gave {0} as result. Message: {1}", result, GetErrorMessage(result)));
+                    lastOperation = "WNetAddConnection2 - existing connection";
                 }
                 // Not connected, connect it!
                 else if (result == (int)ErrorCodes.ERROR_NOT_CONNECTED)
@@ -302,7 +286,7 @@ namespace Utility
                         sRemoteName = sShare
                     };
                     result = WNetAddConnection2(ref oNetworkResource, null, null, 1);
-                    Logger.LogInformation(string.Format("Add operation gave {0} as result. Message: {1}", result, GetErrorMessage(result)));
+                    lastOperation = "WNetAddConnection2";
                     //Console.WriteLine(GetErrorMessage(tes2));
                 }
                 /* 
@@ -311,13 +295,12 @@ namespace Utility
                 */
                 //else if (result == (int)ErrorCodes.ERROR_CONNECTION_UNAVAIL || result == (int)ErrorCodes.NO_ERROR && !currentShare.ToString().Equals(sShare))
                 else if (result == (int)ErrorCodes.NO_ERROR && !currentShare.ToString().Equals(sShare))
-                        {
-                    //Logger.LogInformation(string.Format("Local path ({0}) is connected to '{1}' but should be connected to '{2}'", sDriveLetter + ":", currentShare.ToString(), sShare));
+                {
                     result = WNetCancelConnection2(sDriveLetter + ":", 1, 1);
-                    Logger.LogInformation(string.Format("Cancel operation gave {0} as result. Message: {1}", result, GetErrorMessage(result)));
+                    lastOperation = "WNetCancelConnection2";
                 }
 
-                Logger.LogInformation(string.Format("Last operation gave {0} as result. Message: {1}",result,GetErrorMessage(result)));
+                Logger.LogInformation(string.Format("Operation {0} gave {1} as result. Message: {2}",lastOperation,result,GetErrorMessage(result)));
                 Thread.Sleep(timeToWait);
                 i++;
             }
@@ -371,26 +354,7 @@ namespace ConnectTo
             Console.WriteLine("Usage: ConnectTo (-printer|-defaultprinter|-share letter|-share letter name) resource");
             Environment.Exit(1);
         }
-        /*
-        static void LogInformation(string message)
-        {
-            // using (EventLog eventLog = new EventLog("Application"))
-            //{
-            //    eventLog.Source = "Application";
-            //    eventLog.WriteEntry(message, EventLogEntryType.Information);
-            //}
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Information, 1000);
-        }
-        static void LogError(string message)
-        {
-            //using (EventLog eventLog = new EventLog("Application"))
-            //{
-            //    eventLog.Source = "Application";
-            //    eventLog.WriteEntry(message, EventLogEntryType.Error);
-            //} 
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Error, 1000);
-        }
-       */
+
         static void ConnectToPrinter(string printer, bool defaultPrinter)
         {
             int tryNo = 1;
@@ -433,30 +397,6 @@ namespace ConnectTo
             return true;
         }
 
-        /*
-        static void ConnectToShare(string driveLetter, string share)
-        {
-            LogInformation(String.Format("connectTo -share {0} {1}", driveLetter, share));
-            // Console.WriteLine("Connecting " + driveLetter + " to " + share);
-            if (driveLetter.Length > 1)
-            {
-                driveLetter = driveLetter.Substring(0, 1);
-            }
-            driveLetter = driveLetter.ToUpper();
-            if (driveLetter.CompareTo("D") == -1 || driveLetter.CompareTo("Z") == 1)
-            {
-                LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
-                Environment.Exit(1);
-            }
-
-            int errorCode = Utility.NetworkDrive.MapNetworkDrive(driveLetter, share);
-            if (errorCode != 0)
-            {
-                LogError(String.Format("connectTo MapNetworkDrive exit code = {0}", errorCode));
-            }
-            Environment.Exit(errorCode);
-        }
-        */
         static void ConnectToShare(string driveLetter, string share, string shareName)
         {
             if (driveLetter.Length > 1)
@@ -470,10 +410,7 @@ namespace ConnectTo
                 Environment.Exit(1);
             }
             
-            
             int errorCode = Utility.NetworkDrive.ConnectToShare(driveLetter, share);
-
-
 
             if (errorCode != 0)
             {
@@ -484,7 +421,7 @@ namespace ConnectTo
 
             if (!string.IsNullOrEmpty(shareName))
             {
-                Utility.Logger.LogInformation(string.Format("Set name {0} on {1} for {1}",shareName,driveLetter,share));
+                Utility.Logger.LogInformation(string.Format("Set name {0} on {1} for {2}",shareName,driveLetter,share));
                 string keyName = share.Replace("\\", "#");
                 Registry.SetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\" + keyName, "_LabelFromDesktopINI", shareName);
             }
