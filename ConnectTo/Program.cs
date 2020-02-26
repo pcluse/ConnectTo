@@ -24,6 +24,7 @@ namespace Utility
     {
         NO_ERROR = 0x0,
         ERROR_ACCESS_DENIED = 0x00000005,
+        ERROR_BAD_NETPATH = 0x00000035,
         ERROR_BAD_DEV_TYPE = 0x00000042,
         ERROR_BAD_NET_NAME = 0x00000043,
         ERROR_ALREADY_ASSIGNED = 0x00000055,
@@ -114,6 +115,8 @@ namespace Utility
             {
                 case (int)ErrorCodes.ERROR_ACCESS_DENIED:
                     return "Access is denied.";
+                case (int)ErrorCodes.ERROR_BAD_NETPATH:
+                    return "The network path was not found.";
                 case (int)ErrorCodes.ERROR_BAD_DEV_TYPE:
                     return "The network resource type is not correct.";
                 case (int)ErrorCodes.ERROR_BAD_NET_NAME:
@@ -339,14 +342,13 @@ namespace ConnectTo
                 Utility.Logger.LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
                 Environment.Exit(1);
             }
-
-            int errorCode = Utility.NetworkDrive.ConnectToShare(driveLetter, share);
-
-            if (errorCode != 0)
+            if (share.EndsWith("\\"))
             {
-                Utility.Logger.LogError(String.Format("connectTo MapNetworkDrive exit code = {0}: {1}", errorCode, Utility.NetworkDrive.GetErrorMessage(errorCode)));
-                return;
+                Utility.Logger.LogError(String.Format("Share ends with \\ {0}), removing it.",share));
+                share = share.Substring(0, share.Length-1);
+                Utility.Logger.LogInformation(String.Format("Clean share: {0}", share));
             }
+            int errorCode = Utility.NetworkDrive.ConnectToShare(driveLetter, share);
 
             if (!string.IsNullOrEmpty(shareName))
             {
