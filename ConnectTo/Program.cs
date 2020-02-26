@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Management;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using System.Diagnostics;
@@ -24,23 +23,23 @@ namespace Utility
     public enum ErrorCodes
     {
         NO_ERROR = 0x0,
-        ERROR_ACCESS_DENIED =               0x00000005,
-        ERROR_BAD_DEV_TYPE =                0x00000042,
-        ERROR_BAD_NET_NAME =                0x00000043,
-        ERROR_ALREADY_ASSIGNED =            0x00000055,
-        ERROR_INVALID_PASSWORD =            0x00000056,
-        ERROR_BUSY =                        0x000000AA,
-        ERROR_BAD_DEVICE =                  0x000004B0,
-        ERROR_CONNECTION_UNAVAIL =          0x000004B1,
-        ERROR_BAD_PROFILE =                 0x000004b6,
-        ERROR_NOT_CONNECTED =               0x000008CA,
-        ERROR_OPEN_FILES =                  0x00000961,
-        ERROR_DEVICE_ALREADY_REMEMBERED =   0x000004B2,
-        ERROR_NO_NET_OR_BAD_PATH =          0x000004B3,
-        ERROR_CANNOT_OPEN_PROFILE =         0x000004B5,
-        ERROR_EXTENDED_ERROR =              0x000004B8,
-        ERROR_NO_NETWORK =                  0x000004C6,
-        ERROR_CANCELLED =                   0x000004C7
+        ERROR_ACCESS_DENIED = 0x00000005,
+        ERROR_BAD_DEV_TYPE = 0x00000042,
+        ERROR_BAD_NET_NAME = 0x00000043,
+        ERROR_ALREADY_ASSIGNED = 0x00000055,
+        ERROR_INVALID_PASSWORD = 0x00000056,
+        ERROR_BUSY = 0x000000AA,
+        ERROR_BAD_DEVICE = 0x000004B0,
+        ERROR_CONNECTION_UNAVAIL = 0x000004B1,
+        ERROR_BAD_PROFILE = 0x000004b6,
+        ERROR_NOT_CONNECTED = 0x000008CA,
+        ERROR_OPEN_FILES = 0x00000961,
+        ERROR_DEVICE_ALREADY_REMEMBERED = 0x000004B2,
+        ERROR_NO_NET_OR_BAD_PATH = 0x000004B3,
+        ERROR_CANNOT_OPEN_PROFILE = 0x000004B5,
+        ERROR_EXTENDED_ERROR = 0x000004B8,
+        ERROR_NO_NETWORK = 0x000004C6,
+        ERROR_CANCELLED = 0x000004C7
     }
     public class NetworkDrive
     {
@@ -143,15 +142,15 @@ namespace Utility
                     return "Unable to open the network connection profile.";
                 case (int)ErrorCodes.ERROR_EXTENDED_ERROR:
                     return "An extended error has occurred.";
-                    /*
-                    WNetGetLastErrorA(
-                        LPDWORD lpError,
-                        LPSTR   lpErrorBuf,
-                        DWORD   nErrorBufSize,
-                        LPSTR   lpNameBuf,
-                        DWORD   nNameBufSize
-                        );
-                    */
+                /*
+                WNetGetLastErrorA(
+                    LPDWORD lpError,
+                    LPSTR   lpErrorBuf,
+                    DWORD   nErrorBufSize,
+                    LPSTR   lpNameBuf,
+                    DWORD   nNameBufSize
+                    );
+                */
                 case (int)ErrorCodes.ERROR_NO_NETWORK:
                     return "The network is not present or not started.";
                 case (int)ErrorCodes.ERROR_CANCELLED:
@@ -163,65 +162,7 @@ namespace Utility
             }
         }
 
-        public static int MapNetworkDrive(string sDriveLetter, string sNetworkPath)
-        {
-            //Checks if the last character is \ as this causes error on mapping a drive.
-            if (sNetworkPath.Substring(sNetworkPath.Length - 1, 1) == @"\")
-            {
-                sNetworkPath = sNetworkPath.Substring(0, sNetworkPath.Length - 1);
-            }
-
-            NETRESOURCE oNetworkResource = new NETRESOURCE()
-            {
-                oResourceType = ResourceType.RESOURCETYPE_DISK,
-                sLocalName = sDriveLetter + ":",
-                sRemoteName = sNetworkPath
-            };
-
-            //If Drive is already mapped disconnect the current 
-            //mapping before adding the new mapping
-            string currentNetworkPath = GetCurrentMapping(sDriveLetter);
-
-            if (currentNetworkPath == "")
-            {
-                // Not connected do nothing
-            }
-            else if (currentNetworkPath == sNetworkPath)
-            {
-                // Already connected
-                return 0;
-            }
-            else {
-                // Connected to something else. Disconnect first
-                DisconnectNetworkDrive(sDriveLetter, true);
-            }
-
-            return WNetAddConnection2(ref oNetworkResource, null, null, 0);
-        }
-
-        public static int DisconnectNetworkDrive(string sDriveLetter, bool bForceDisconnect)
-        {
-            if (bForceDisconnect)
-            {
-                return WNetCancelConnection2(sDriveLetter + ":", 0, 1);
-            }
-            else
-            {
-                return WNetCancelConnection2(sDriveLetter + ":", 0, 0);
-            }
-        }
-
-        public static string GetCurrentMapping(string sDriveLetter)
-        {
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(
-                "select * from Win32_MappedLogicalDisk where caption = '" + sDriveLetter + ":'");
-            foreach (ManagementObject drive in searcher.Get())
-            {
-                return drive["ProviderName"].ToString();
-            }
-            return "";
-        }
-        public static int ConnectToShare (string sDriveLetter, string sShare)
+        public static int ConnectToShare(string sDriveLetter, string sShare)
         {
             int length = 300;
             int result = 0;
@@ -242,7 +183,7 @@ namespace Utility
                 if (result == (int)ErrorCodes.NO_ERROR && currentShare.ToString().Equals(sShare))
                 {
                     // Everything is fine, return
-                    Logger.LogInformation(string.Format("{1}: is connected to {1}",sDriveLetter,sShare));
+                    Logger.LogInformation(string.Format("{1}: is connected to {1}", sDriveLetter, sShare));
                     return result;
                 }
                 /*
@@ -287,7 +228,7 @@ namespace Utility
                     lastOperation = "WNetCancelConnection2";
                 }
 
-                Logger.LogInformation(string.Format("Operation {0} gave {1} as result. Message: {2}",lastOperation,result,GetErrorMessage(result)));
+                Logger.LogInformation(string.Format("Operation {0} gave {1} as result. Message: {2}", lastOperation, result, GetErrorMessage(result)));
                 // To avoid hammering, wait for a while
                 Thread.Sleep(timeToWait);
                 i++;
@@ -345,7 +286,8 @@ namespace ConnectTo
         static void ConnectToPrinter(string printer, bool defaultPrinter)
         {
             int tryNo = 1;
-            while (tryNo < 4) {
+            while (tryNo < 4)
+            {
                 bool success = ConnectToPrinterAux(printer, defaultPrinter, tryNo);
                 if (success)
                 {
@@ -362,8 +304,8 @@ namespace ConnectTo
             int error;
             Utility.Logger.LogInformation(String.Format("connectTo {0} {1} try #{2}", (defaultPrinter ? "-defaultprinter" : "-printer"), printer, tryNo));
             bool success = Utility.Printer.AddPrinterConnection(printer);
-            
-            if (! success)
+
+            if (!success)
             {
                 error = Marshal.GetLastWin32Error();
                 Utility.Logger.LogError(String.Format("connectTo AddPrinterConnection exit code = {0}", error));
@@ -397,7 +339,7 @@ namespace ConnectTo
                 Utility.Logger.LogError(String.Format("connectTo letter {0}: not allowed", driveLetter));
                 Environment.Exit(1);
             }
-            
+
             int errorCode = Utility.NetworkDrive.ConnectToShare(driveLetter, share);
 
             if (errorCode != 0)
@@ -408,7 +350,7 @@ namespace ConnectTo
 
             if (!string.IsNullOrEmpty(shareName))
             {
-                Utility.Logger.LogInformation(string.Format("Set name '{0}' on {1} for {2}",shareName,driveLetter,share));
+                Utility.Logger.LogInformation(string.Format("Set name '{0}' on {1} for {2}", shareName, driveLetter, share));
                 string keyName = share.Replace("\\", "#");
                 Registry.SetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\" + keyName, "_LabelFromDesktopINI", shareName);
             }
