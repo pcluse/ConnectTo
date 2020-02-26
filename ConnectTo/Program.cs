@@ -243,6 +243,7 @@ namespace Utility
 
     public class Logger
     {
+        static string EventLogSource = "ConnectTo";
         public static void LogInformation(string message)
         {
             /* using (EventLog eventLog = new EventLog("Application"))
@@ -250,7 +251,7 @@ namespace Utility
                 eventLog.Source = "Application";
                 eventLog.WriteEntry(message, EventLogEntryType.Information);
             } */
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Information, 1000);
+            EventLog.WriteEntry(EventLogSource, message, EventLogEntryType.Information, 1000);
         }
         public static void LogError(string message)
         {
@@ -259,7 +260,7 @@ namespace Utility
                 eventLog.Source = "Application";
                 eventLog.WriteEntry(message, EventLogEntryType.Error);
             } */
-            EventLog.WriteEntry(".NET Runtime", message, EventLogEntryType.Error, 1000);
+            EventLog.WriteEntry(EventLogSource, message, EventLogEntryType.Error, 1000);
         }
     }
 
@@ -361,25 +362,37 @@ namespace ConnectTo
         }
         static void Main(string[] args)
         {
-            if (args.Length == 2 && args[0].Equals("-printer"))
+            try
             {
-                ConnectToPrinter(args[1], false);
+                if (args.Length == 2 && args[0].Equals("-printer"))
+                {
+                    ConnectToPrinter(args[1], false);
+                }
+                else if (args.Length == 2 && args[0].Equals("-defaultprinter"))
+                {
+                    ConnectToPrinter(args[1], true);
+                }
+                else if (args.Length == 3 && args[0].Equals("-share"))
+                {
+                    ConnectToShare(args[1], args[2], null);
+                }
+                else if (args.Length == 4 && args[0].Equals("-share"))
+                {
+                    ConnectToShare(args[1], args[3], args[2]);
+                }
+                else
+                {
+                    PrintUsage();
+                }
+            } catch (System.Security.SecurityException se)
+            {
+                EventLog.WriteEntry("Application Error", "The original eventlog source could not be used. Please create it before running this application again.", EventLogEntryType.Error, 10000);
+                Environment.Exit(se.HResult);
             }
-            else if (args.Length == 2 && args[0].Equals("-defaultprinter"))
+            catch (System.Exception ex) 
             {
-                ConnectToPrinter(args[1], true);
-            }
-            else if (args.Length == 3 && args[0].Equals("-share"))
-            {
-                ConnectToShare(args[1], args[2], null);
-            }
-            else if (args.Length == 4 && args[0].Equals("-share"))
-            {
-                ConnectToShare(args[1], args[3], args[2]);
-            }
-            else
-            {
-                PrintUsage();
+                EventLog.WriteEntry("Application Error", String.Format("Unidentified error! {0}",ex.Message), EventLogEntryType.Error, 10000);
+                Environment.Exit(1);
             }
         }
     }
